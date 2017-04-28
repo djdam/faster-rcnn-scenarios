@@ -13,7 +13,8 @@ RPN="rpn"
 FAST_RCNN="fast_rcnn"
 
 class NetworkConfig(CaffeConfig):
-    def __init__(self, network_type, scenarios_dir=None, scenario=None, stage=1, train=True, num_classes=1000, conv_1_to_5_learn=False):
+    def __init__(self, network_type, scenarios_dir=None, scenario=None, stage=1, train=True, num_classes=1000, conv_1_to_5_learn=False,
+                 anchor_feat_stride=16,anchor_scales=[8, 16, 32], anchor_ratios=[0.5, 1, 2]):
         CaffeConfig.__init__(self, scenarios_dir, scenario)
         self.network_type=network_type
         self.scenarios_dir=scenarios_dir
@@ -22,6 +23,9 @@ class NetworkConfig(CaffeConfig):
         self.num_classes=num_classes
         self.conv_1_to_5_learn=conv_1_to_5_learn
         self.stage=stage
+        self.anchor_feat_stride = anchor_feat_stride
+        self.anchor_scales = anchor_scales
+        self.anchor_ratios = anchor_ratios
 
     def path(self):
         if not self._scenario_check():
@@ -34,16 +38,18 @@ class NetworkConfig(CaffeConfig):
     def save(self, network):
         return CaffeConfig.save(self, network.to_proto())
 
+    def nr_of_anchors(self):
+        return len(self.anchor_scales) * len(self.anchor_ratios)
+
     def __repr__(self):
         return to_string(self)
 
 
 class RegionProposalNetworkConfig(NetworkConfig):
     def __init__(self, scenarios_dir=None, scenario=None, stage=1,  train=True, num_classes=1000, conv_1_to_5_learn=False,
-                 anchor_feat_stride=16, anchor_scales=[8,16,32]):
-        NetworkConfig.__init__(self, RPN, scenarios_dir, scenario, stage, train, num_classes, conv_1_to_5_learn)
-        self.anchor_feat_stride=anchor_feat_stride
-        self.anchor_scales=anchor_scales
+                 anchor_feat_stride=16, anchor_scales=[8,16,32], anchor_ratios=[0.5, 1, 2]):
+        NetworkConfig.__init__(self, RPN, scenarios_dir, scenario, stage, train, num_classes, conv_1_to_5_learn, anchor_feat_stride, anchor_scales, anchor_ratios)
+
 
     def generate(self):
         conf = self
@@ -62,7 +68,7 @@ class RegionProposalNetworkConfig(NetworkConfig):
             n.data, n.im_info = LT.input()
         conv15_param = LT.learned_param if (conf.conv_1_to_5_learn) else LT.frozen_param
         LT.conv1_to_5(n, conv15_param)
-        n.rpn_conv1, n.rpn_relu1, n.rpn_cls_score, n.rpn_bbox_pred = LT.rpn_class_and_bbox_predictors(n, conf.train, conf.num_classes, param)
+        n.rpn_conv1, n.rpn_relu1, n.rpn_cls_score, n.rpn_bbox_pred = LT.rpn_class_and_bbox_predictors(n, self, param)
         n.rpn_cls_score_reshape = LT.reshape(n.rpn_cls_score, [0, 2, -1, 0])
 
         if conf.train:
@@ -72,7 +78,7 @@ class RegionProposalNetworkConfig(NetworkConfig):
                 python_param=dict(
                     module='rpn.anchor_target_layer',
                     layer='AnchorTargetLayer',
-                    param_str="{feat_stride: 16, scales: %s}" % str(self.anchor_scales)
+                    param_str=LT.anchor_params(self.anchor_feat_stride, self.anchor_scales, self.anchor_ratios)
                 ))
             n.loss_cls = LT.soft_max_with_loss(["rpn_cls_score_reshape", "rpn_labels"])
             n.loss_bbox = L.SmoothL1Loss(
@@ -86,13 +92,14 @@ class RegionProposalNetworkConfig(NetworkConfig):
             n.fc7 = L.InnerProduct(n.fc6, num_output=4096, param=LT.frozen_param)
             n.silence_fc7 = LT.silence(n.fc7)
         else:
-            n.rpn_cls_prob, n.rpn_cls_prob_reshape, n.rois = LT.roi_proposal(n)
+            n.rpn_cls_prob, n.rpn_cls_prob_reshape, n.rois = LT.roi_proposal(n, self)
 
         return self.save(n)
 
 class FastRcnnNetworkConfig(NetworkConfig):
-    def __init__(self, scenarios_dir=None, scenario=None, stage=1, train=True, num_classes=1000, conv_1_to_5_learn=False):
-        NetworkConfig.__init__(self, FAST_RCNN, scenarios_dir, scenario, stage, train, num_classes, conv_1_to_5_learn)
+    def __init__(self, scenarios_dir=None, scenario=None, stage=1, train=True, num_classes=1000, conv_1_to_5_learn=False,
+                 anchor_feat_stride=16, anchor_scales=[8, 16, 32], anchor_ratios=[0.5, 1, 2]):
+        NetworkConfig.__init__(self, FAST_RCNN, scenarios_dir, scenario, stage, train, num_classes, conv_1_to_5_learn, anchor_feat_stride, anchor_scales, anchor_ratios)
 
     def generate(self):
         """Returns a NetSpec specifying CaffeNet, following the original proto text
@@ -117,9 +124,9 @@ class FastRcnnNetworkConfig(NetworkConfig):
         LT.conv1_to_5(n, conv15_param)
 
         if not(self.train):
-            n.rpn_conv1, n.rpn_relu1, n.rpn_cls_score, n.rpn_bbox_pred = LT.rpn_class_and_bbox_predictors(n, conf.train, conf.num_classes, param)
+            n.rpn_conv1, n.rpn_relu1, n.rpn_cls_score, n.rpn_bbox_pred = LT.rpn_class_and_bbox_predictors(n, self, param)
             n.rpn_cls_score_reshape = LT.reshape(n.rpn_cls_score, [0, 2, -1, 0])
-            n.rpn_cls_prob, n.rpn_cls_prob_reshape, n.rois = LT.roi_proposal(n)
+            n.rpn_cls_prob, n.rpn_cls_prob_reshape, n.rois = LT.roi_proposal(n, self)
 
         n.roi_pool = L.ROIPooling(bottom=["conv5", "rois"], pooled_w=6, pooled_h=6, spatial_scale=0.0625)
 
@@ -146,7 +153,7 @@ class FastRcnnNetworkConfig(NetworkConfig):
             n.cls_prob = L.Softmax(n.cls_score, loss_param=dict(ignore_label=-1, normalize=True))
 
         if self.train:
-            n.rpn_conv1, n.rpn_relu1, n.rpn_cls_score, n.rpn_bbox_pred=LT.rpn_class_and_bbox_predictors(n, conf.train, conf.num_classes, LT.frozen_param)
+            n.rpn_conv1, n.rpn_relu1, n.rpn_cls_score, n.rpn_bbox_pred=LT.rpn_class_and_bbox_predictors(n, self, LT.frozen_param)
 
         n.silence_rpn_cls_score = LT.silence(n.rpn_cls_score)
         n.silence_rpn_bbox_pred =  LT.silence(n.rpn_bbox_pred)

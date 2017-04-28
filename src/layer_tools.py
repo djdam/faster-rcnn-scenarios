@@ -1,6 +1,6 @@
 from caffe import layers as L
 from caffe import params as P
-
+import config
 weight_param = dict(lr_mult=1, decay_mult=1)
 bias_param   = dict(lr_mult=2, decay_mult=0)
 learned_param = [weight_param, bias_param]
@@ -55,33 +55,39 @@ def conv1_to_5(n, param):
     n.conv4, n.relu4 = conv_relu(n.conv3, ks=3, nout=384, stride=1, pad=1, param=param)
     n.conv5, n.relu5 = conv_relu(n.conv4, ks=3, nout=256, stride=1, pad=1, param=param)
 
-def rpn_class_and_bbox_predictors(n, train, num_classes, param):
-    weight_filler = (WEIGHT_FILLER if train else dict())
-    bias_filler = (BIAS_FILLER if train else dict())
+def rpn_class_and_bbox_predictors(n, net, param):
+    weight_filler = (WEIGHT_FILLER if net.train else dict())
+    bias_filler = (BIAS_FILLER if net.train else dict())
     rpn_conv1, rpn_relu1 = conv_relu(n.conv5, ks=3, nout=256, stride=1, pad=1, param=param,
                                          weight_filler=weight_filler, bias_filler=bias_filler)
     rpn_cls_score = L.Convolution(rpn_conv1, kernel_size=1, stride=1,
-                                    num_output=num_classes * 9, pad=0,
+                                    num_output=net.num_classes * net.nr_of_anchors(), pad=0,
                                     weight_filler=weight_filler,
                                     bias_filler=bias_filler, param=param)
 
     rpn_bbox_pred = L.Convolution(rpn_conv1, kernel_size=1, stride=1,
-                                    num_output=4 * 9, pad=0,
+                                    num_output=4 * net.nr_of_anchors(), pad=0,
                                     weight_filler=weight_filler,
                                     bias_filler=bias_filler, param=param)
 
     return rpn_conv1, rpn_relu1, rpn_cls_score, rpn_bbox_pred
 
-def roi_proposal(n):
+def anchor_params(feat_stride, scales, ratios):
+    if config.EXTENDED_PY_FASTER_RCNN:
+        return "{feat_stride: %s, scales: %s, ratios: %s}" % (str(feat_stride), str(scales),str(ratios))
+    else:
+        return "{feat_stride: %s, scales: %s}" % (str(feat_stride), str(scales))
+
+def roi_proposal(n, net):
     rpn_cls_prob = L.Softmax(n.rpn_cls_score_reshape)
-    rpn_cls_prob_reshape = reshape(n.rpn_cls_score, [0, 18, -1, 0])
+    rpn_cls_prob_reshape = reshape(n.rpn_cls_score, [0, 2 * net.nr_of_anchors(), -1, 0]) # 2 = bg/fg
     rois = L.Python(
         bottom=["rpn_cls_prob_reshape", "rpn_bbox_pred", "im_info"],
         top=['scores'],
         python_param=dict(
             module='rpn.proposal_layer',
             layer='ProposalLayer',
-            param_str="feat_stride: 16"
+            param_str=anchor_params(net.anchor_feat_stride, net.anchor_scales, net.anchor_ratios)
         ))
 
     return rpn_cls_prob, rpn_cls_prob_reshape, rois

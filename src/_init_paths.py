@@ -7,7 +7,7 @@
 
 """Set up paths for Fast R-CNN."""
 import os
-from os.path import join, dirname
+from os.path import join, dirname, exists
 import sys
 
 def add_path(path):
@@ -18,9 +18,16 @@ def add_path(path):
 this_dir = dirname(__file__)
 caffe_root = os.environ['CAFFE_ROOT']
 faster_rcnn_root = os.environ['FASTER_RCNN_ROOT']
+
+private_dir = join(this_dir, '..', 'private')
+
+
 lib_path = join(faster_rcnn_root, 'lib')
 
 # Add caffe & faster-rcnn to PYTHONPATH
 add_path(caffe_root)
 # Add lib to PYTHONPATH
 add_path(lib_path)
+
+if exists(private_dir):
+    add_path(private_dir)

@@ -43,14 +43,17 @@ def create_scenarios():
     small_scales = deepcopy(base_scenario)
     small_scales.name("scales_4_8_16")
     small_scales.rpn_config.anchor_scales = [4, 8, 16]
+    small_scales.fast_rcnn_config.anchor_scales = small_scales.rpn_config.anchor_scales
 
     default_scales = deepcopy(base_scenario)
     default_scales.name("scales_8_16_32")
     default_scales.rpn_config.anchor_scales = [8, 16, 32]
+    default_scales.fast_rcnn_config.anchor_scales = default_scales.rpn_config.anchor_scales
 
     large_scales = deepcopy(base_scenario)
     large_scales.name("scales_16_32_64")
     large_scales.rpn_config.anchor_scales = [16, 32, 64]
+    large_scales.fast_rcnn_config.anchor_scales = large_scales.rpn_config.anchor_scales
 
     return small_scales, default_scales, large_scales
 

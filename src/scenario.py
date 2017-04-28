@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+
+
 import network
 import argparse
 from network import RegionProposalNetworkConfig as RpnConfig, FastRcnnNetworkConfig as FastRcnnConfig
