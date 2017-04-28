@@ -4,7 +4,8 @@
 # Faster R-CNN
 # Copyright (c) 2015 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
+# Originally written by Rob Girshick. Adapted by Dennis Dam to
+# use scenarios.
 # --------------------------------------------------------
 
 """Train a Faster R-CNN network using alternating optimization.
