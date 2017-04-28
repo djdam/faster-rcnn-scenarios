@@ -11,6 +11,7 @@ from os.path import isfile, join, dirname, abspath
 from caffe_config import CaffeConfig
 from scenario_bash_script import SCRIPT as bash
 import _init_paths
+import draw.plot as plot
 
 this_dir = dirname(abspath(__file__))
 
@@ -82,7 +83,7 @@ class Scenario(CaffeConfig):
         script_settings['testproto']=self.models['fast_rcnn_test']
         script_settings['scenario_file']=self.path()
         script_settings['py_faster_rcnn']=_init_paths.faster_rcnn_root
-
+        script_settings['plot_script']=abspath(plot.__file__)
         f.write(bash.format(**script_settings))
         chmod(script_path, 0755)
 

@@ -26,6 +26,8 @@ echo Logging output to "$LOG"
 
 time {train_script} {scenario_file} || quit
 
+{plot_script} $LOG {scenarios_dir}/{scenario}/output/results.png || true
+
 time ./tools/test_net.py --gpu {gpu_id} \\
   --def {testproto} \\
   --net {net_final_path} \\
