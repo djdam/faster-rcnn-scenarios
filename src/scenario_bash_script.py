@@ -5,6 +5,8 @@ SCRIPT="""
 set -x
 set -e
 
+rm -f $CAFFE_ROOT/data/cache/*.pkl
+
 DIR=`pwd`
 
 function quit {{
@@ -26,13 +28,17 @@ echo Logging output to "$LOG"
 
 time {train_script} {scenario_file} || quit
 
-{plot_script} $LOG {scenarios_dir}/{scenario}/output/results.png || true
-
 time ./tools/test_net.py --gpu {gpu_id} \\
   --def {testproto} \\
   --net {net_final_path} \\
   --imdb {test_imdb} \\
   --cfg {config_path}  || quit
 
+chmod u+x {plot_script}
+{plot_script} $LOG {scenarios_dir}/{scenario}/output/results.png || true
+
+MEAN_AP=`grep "Mean AP = " ${{LOG}} | awk '{{print $3}}'`
+
+echo "{scenario} finished with mAP=$MEAN_AP" >> {scenarios_dir}/status.txt
 quit
 """
