@@ -14,7 +14,7 @@ if __name__ == '__main__':
 from datasets.factory import get_imdb
 
 
-imdb=get_imdb("technicaldrawings_single-numbers_train")
+imdb=get_imdb("technicaldrawings_numbers_train")
 
 resize_dim=600
 
@@ -25,8 +25,9 @@ class Image:
 
 def get_statistics(imdb):
     images=[]
-    for boxes, width, height in [(entry['boxes'], entry['width'], entry['height']) for entry in imdb.gt_roidb()]:
+    for boxes, width, height, filename in [(entry['boxes'], entry['width'], entry['height'], entry['filename']) for entry in imdb.gt_roidb()]:
         image=Image()
+        image.filename=filename
         image.width=int(width)
         image.height=int(height)
         if width > height:
@@ -62,15 +63,28 @@ def get_statistics(imdb):
 
 
 stats = get_statistics(imdb)
+warnings=[]
 for im in stats:
     print 'image size: %s x %s  -> %s x %s'%(im.width,im.height, int(im.dest_width), int(im.dest_height))
     for box_idx in range(0,len(im.boxes)):
         x1, y1, x2, y2 = im.boxes[box_idx]
         dest_x1, dest_y1, dest_x2, dest_y2 = im.resized_boxes[box_idx]
         aspect_ratio=im.aspect_ratios[box_idx]
+        width = (dest_x2-dest_x1)
+        height = (dest_y2-dest_y1)
+
+        if (width == 0 or height == 0):
+            warnings.append("ERROR: height or width is 0 for "+im.filename)
+        if (width*height < 10):
+            warnings.append("Warning: contains small box: "+im.filename)
         print "bbox: "
         print "    resize       : [%s,%s,%s,%s] -> [%s,%s,%s,%s]"%(x1,y1,x2,y2,dest_x1,dest_y1,dest_x2,dest_y2)
+        print "    width       : %d"%(dest_x2-dest_x1)
+        print "    height       : %d" % (dest_y2 - dest_y1)
         print "    aspect ratio : %.2f"%aspect_ratio
+
+for msg in warnings:
+    print 'warning:',msg
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 
