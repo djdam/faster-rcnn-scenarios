@@ -269,12 +269,14 @@ if __name__ == '__main__':
     print 'Number of parts is',parts
     pool=Pool(processes=parts)
 
-    def gpu_conf(cfg):
+    def gpu_conf(cfg, gpu_id=None):
 
-        DEVICE_ID_LIST = GPUtil.getFirstAvailable()
-        if (len(DEVICE_ID_LIST) > 0):
-            cfg.GPU_ID = DEVICE_ID_LIST[0]  # grab first element from list
-
+        if gpu_id==None:
+            DEVICE_ID_LIST = GPUtil.getFirstAvailable()
+            if (len(DEVICE_ID_LIST) > 0):
+                cfg.GPU_ID = DEVICE_ID_LIST[0]  # grab first element from list
+        else:
+            cfg.GPU_ID=gpu_id
 
         return cfg
 
@@ -282,7 +284,7 @@ if __name__ == '__main__':
         dict(
             imdb_name='%s_part_%dof%d' % (scenario.train_imdb, part_id, parts),
             rpn_model_path=str(rpn_stage1_out['model_path']),
-            cfg=gpu_conf(cfg),
+            cfg=gpu_conf(cfg, part_id-1),
             rpn_test_prototxt=scenario.models['rpn_test'],
             output_dir=output_dir,
             part_id=part_id
