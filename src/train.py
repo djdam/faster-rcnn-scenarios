@@ -263,36 +263,65 @@ if __name__ == '__main__':
     print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
     print 'Stage 1 RPN, generate proposals'
     print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+    multi_gpu=False # disable for now
+    if multi_gpu:
 
-    parts = min(len(GPUtil.getGPUs()),cpu_count)
 
-    print 'Number of parts is',parts
-    pool=Pool(processes=parts)
+        parts = min(len(GPUtil.getGPUs()),cpu_count)
 
-    def gpu_conf(cfg, gpu_id=None):
+        print 'Number of parts is',parts
+        pool=Pool(processes=parts)
 
-        if gpu_id==None:
-            DEVICE_ID_LIST = GPUtil.getFirstAvailable()
-            if (len(DEVICE_ID_LIST) > 0):
-                cfg.GPU_ID = DEVICE_ID_LIST[0]  # grab first element from list
-        else:
-            cfg.GPU_ID=gpu_id
+        def gpu_conf(cfg, gpu_id=None):
 
-        return cfg
+            if gpu_id==None:
+                DEVICE_ID_LIST = GPUtil.getFirstAvailable()
+                if (len(DEVICE_ID_LIST) > 0):
+                    cfg.GPU_ID = DEVICE_ID_LIST[0]  # grab first element from list
+            else:
+                cfg.GPU_ID=gpu_id
 
-    configs=[
-        dict(
-            imdb_name='%s_part_%dof%d' % (scenario.train_imdb, part_id, parts),
+            return cfg
+
+        configs=[
+            dict(
+                imdb_name='%s_part_%dof%d' % (scenario.train_imdb, part_id, parts),
+                rpn_model_path=str(rpn_stage1_out['model_path']),
+                cfg=gpu_conf(cfg, part_id-1),
+                rpn_test_prototxt=scenario.models['rpn_test'],
+                output_dir=output_dir,
+                part_id=part_id
+
+            ) for part_id in range(1,parts+1)
+        ]
+        pprint.pprint(configs)
+        results=pool.map(rpn_generate_kw_wrapper, configs)
+
+        # rpn_net = ''
+        # for p in processes:
+        #     p.start()
+        #     passed_vars = mp_queue.get()
+        #     rpn_net = passed_vars['rpn_net']
+        #     proposal_paths.append(passed_vars['proposal_path'])
+        #
+        # for p in processes:
+        #     p.join()
+        #
+        # aggregated_proposal_path = join_pkls(proposal_paths, output_dir, rpn_net)
+
+    else:
+        mp_kwargs = dict(
+            queue=mp_queue,
+            imdb_name=scenario.train_imdb,
             rpn_model_path=str(rpn_stage1_out['model_path']),
-            cfg=gpu_conf(cfg, part_id-1),
+            cfg=cfg,
             rpn_test_prototxt=scenario.models['rpn_test'],
-            output_dir=output_dir,
-            part_id=part_id
-
-        ) for part_id in range(1,parts+1)
-    ]
-    pprint.pprint(configs)
-    results=pool.map(rpn_generate_kw_wrapper, configs)
+            output_dir=output_dir
+        )
+        p = mp.Process(target=rpn_generate, kwargs=mp_kwargs)
+        p.start()
+        rpn_stage1_out['proposal_path'] = mp_queue.get()['proposal_path']
+        p.join()
 
         # processes=[]
         # proposal_paths=[]
@@ -314,18 +343,6 @@ if __name__ == '__main__':
         #
         #     processes.append(mp.Process(target=rpn_generate, kwargs=mp_kwargs))
 
-    rpn_net=''
-    for p in processes:
-        p.start()
-        passed_vars = mp_queue.get()
-        rpn_net=passed_vars['rpn_net']
-        proposal_paths.append(passed_vars['proposal_path'])
-
-
-    for p in processes:
-        p.join()
-
-    aggregated_proposal_path=join_pkls(proposal_paths, output_dir, rpn_net)
 
     print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
     print 'Stage 1 Fast R-CNN using RPN proposals, init from ImageNet model'
