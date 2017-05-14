@@ -129,13 +129,17 @@ def get_legend_loc(chart_type):
 
 def plot_chart(log_file, path_to_png):
 
-    phases, mean_ap = parse_log(log_file)
+    mean_ap=0
+    phases, detected_mean_ap = parse_log(log_file)
+    if detected_mean_ap != None:
+        mean_ap=detected_mean_ap
 
     print "Processing %s with mAP=%f" % (path_to_png, mean_ap)
 
     plt.figure(1, figsize=(8, 32))
 
-    for phase_idx in range(0,len(phases)):
+    end_phase=min(len(phases), 4)
+    for phase_idx in range(0,end_phase):
         phase=phases[phase_idx]
         plt.subplot(411+phase_idx)
         label = LABELS[phase_idx]
@@ -183,3 +187,4 @@ if __name__ == '__main__':
             print 'Log file does not exist: %s' % log_file
             sys.exit()
         plot_chart(log_file, path_to_png)
+

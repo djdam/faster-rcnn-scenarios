@@ -23,6 +23,7 @@ import argparse
 import numpy as np
 import sys, os
 import multiprocessing as mp
+from multiprocessing import Pool, TimeoutError
 import cPickle
 import shutil
 from scenario import Scenario
@@ -35,6 +36,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train a Faster R-CNN network')
     parser.add_argument('scenario_file',
                         help='Path scenario file (e.g. /home/user/scenario.p)')
+    parser.add_argument('--gpus', dest='gpus',
+                        help='Number of GPU cores)',
+                        default=1, type=int)
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file',
                         default=None, type=str)
@@ -107,8 +111,11 @@ def train_rpn(queue=None, imdb_name=None, init_model=None, solver=None,
     # Send final model path through the multiprocessing queue
     queue.put({'model_path': rpn_model_path})
 
+def rpn_generate_kw_wrapper(kwargs):
+    return rpn_generate(**kwargs)
+
 def rpn_generate(queue=None, imdb_name=None, rpn_model_path=None, cfg=None,
-                 rpn_test_prototxt=None, output_dir=None):
+                 rpn_test_prototxt=None, output_dir=None, part_id=None):
     """Use a trained RPN to generate proposals.
     """
 
@@ -139,11 +146,12 @@ def rpn_generate(queue=None, imdb_name=None, rpn_model_path=None, cfg=None,
     # multiprocessing queue
     rpn_net_name = os.path.splitext(os.path.basename(rpn_model_path))[0]
     rpn_proposals_path = os.path.join(
-        output_dir, rpn_net_name + '_proposals.pkl')
+        output_dir, rpn_net_name + ('_'+part_id if part_id != None else '')+'_proposals.pkl')
     with open(rpn_proposals_path, 'wb') as f:
         cPickle.dump(rpn_proposals, f, cPickle.HIGHEST_PROTOCOL)
     print 'Wrote RPN proposals to {}'.format(rpn_proposals_path)
-    queue.put({'proposal_path': rpn_proposals_path})
+    queue.put({'proposal_path': rpn_proposals_path, 'rpn_net': rpn_net_name})
+
 
 def train_fast_rcnn(queue=None, imdb_name=None, init_model=None, solver=None,
                     max_iters=None, cfg=None, rpn_file=None, output_dir=None):
@@ -185,11 +193,24 @@ def dir_exists_or_create(path):
         except OSError as exc:  # Guard against race condition
             pass
 
+
+def join_pkls(proposal_paths, output_dir, rpn_net_name):
+    rpn_proposals=[]
+    for ppath in proposal_paths:
+        f= open(ppath, 'r')
+        rpn_proposals+=cPickle.load(f)
+
+        rpn_proposals_path=os.path.join(output_dir, rpn_net_name+'_proposals.pkl')
+    with open(rpn_proposals_path, 'wb') as f:
+        cPickle.dump(rpn_proposals, f, cPickle.HIGHEST_PROTOCOL)
+    return rpn_proposals_path
+
+
 if __name__ == '__main__':
 
     # first change current dir to py-faster-rcnn dir, or else scripts will break:
     os.chdir(_init_paths.faster_rcnn_root)
-
+    print dir(mp)
     args = parse_args()
 
     print(args)
@@ -219,7 +240,7 @@ if __name__ == '__main__':
     print scenario.scenario
     print '#'*25
     max_iters = scenario.max_iters
-
+    cpu_count=mp.cpu_count()
     print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
     print 'Stage 1 RPN, init from ImageNet model'
     print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
@@ -242,18 +263,57 @@ if __name__ == '__main__':
     print 'Stage 1 RPN, generate proposals'
     print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
 
-    mp_kwargs = dict(
-            queue=mp_queue,
-            imdb_name=scenario.train_imdb,
+    parts = min(args.gpus,cpu_count)
+
+    print 'Number of parts is',parts
+    pool=Pool(processes=parts)
+
+    configs=[
+        dict(
+            imdb_name='%s_part_%dof%d' % (scenario.train_imdb, part_id, parts),
             rpn_model_path=str(rpn_stage1_out['model_path']),
             cfg=cfg,
             rpn_test_prototxt=scenario.models['rpn_test'],
-            output_dir = output_dir
-    )
-    p = mp.Process(target=rpn_generate, kwargs=mp_kwargs)
-    p.start()
-    rpn_stage1_out['proposal_path'] = mp_queue.get()['proposal_path']
-    p.join()
+            output_dir=output_dir,
+            part_id=part_id
+
+        ) for part_id in range(1,parts+1)
+    ]
+    pprint.pprint(configs)
+    results=pool.map(rpn_generate_kw_wrapper, configs)
+
+        # processes=[]
+        # proposal_paths=[]
+        # base_dict=
+        # for i in range(0, parts):
+        #
+        #
+        #     part_id='%dof%d'%(i+1, parts)
+        #     mp_kwargs = dict(
+        #             queue=mp_queue,
+        #             imdb_name= '%s_part_%s'%(scenario.train_imdb, part_id),
+        #             rpn_model_path=str(rpn_stage1_out['model_path']),
+        #             cfg=cfg,
+        #             rpn_test_prototxt=scenario.models['rpn_test'],
+        #             output_dir = output_dir,
+        #             part_id=part_id
+        #
+        #     )
+        #
+        #     processes.append(mp.Process(target=rpn_generate, kwargs=mp_kwargs))
+
+    rpn_net=''
+    for p in processes:
+        p.start()
+        passed_vars = mp_queue.get()
+        rpn_net=passed_vars['rpn_net']
+        proposal_paths.append(passed_vars['proposal_path'])
+
+
+    for p in processes:
+        p.join()
+
+    aggregated_proposal_path=join_pkls(proposal_paths, output_dir, rpn_net)
 
     print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
     print 'Stage 1 Fast R-CNN using RPN proposals, init from ImageNet model'
@@ -267,7 +327,7 @@ if __name__ == '__main__':
             solver=scenario.models['stage1_fast_rcnn_solver'],
             max_iters=max_iters[1],
             cfg=cfg,
-            rpn_file=rpn_stage1_out['proposal_path'], output_dir=output_dir)
+            rpn_file=aggregated_proposal_path, output_dir=output_dir)
     p = mp.Process(target=train_fast_rcnn, kwargs=mp_kwargs)
     p.start()
     fast_rcnn_stage1_out = mp_queue.get()
@@ -300,6 +360,8 @@ if __name__ == '__main__':
             rpn_model_path=str(rpn_stage2_out['model_path']),
             cfg=cfg,
             rpn_test_prototxt=scenario.models['rpn_test'], output_dir=output_dir)
+
+
     p = mp.Process(target=rpn_generate, kwargs=mp_kwargs)
     p.start()
     rpn_stage2_out['proposal_path'] = mp_queue.get()['proposal_path']

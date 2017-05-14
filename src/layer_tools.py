@@ -80,7 +80,7 @@ def anchor_params(feat_stride, scales, ratios):
 
 def roi_proposal(n, net):
     rpn_cls_prob = L.Softmax(n.rpn_cls_score_reshape)
-    rpn_cls_prob_reshape = reshape(n.rpn_cls_score, [0, 2 * net.nr_of_anchors(), -1, 0]) # 2 = bg/fg
+    rpn_cls_prob_reshape = reshape(rpn_cls_prob, [0, 2 * net.nr_of_anchors(), -1, 0]) # 2 = bg/fg
     rois = L.Python(
         bottom=["rpn_cls_prob_reshape", "rpn_bbox_pred", "im_info"],
         top=['scores'],

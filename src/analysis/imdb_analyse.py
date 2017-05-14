@@ -73,7 +73,7 @@ for im in stats:
         width = (dest_x2-dest_x1)
         height = (dest_y2-dest_y1)
 
-        if (width == 0 or height == 0):
+        if (width <= 0 or height <= 0):
             warnings.append("ERROR: height or width is 0 for "+im.filename)
         if (width*height < 10):
             warnings.append("Warning: contains small box: "+im.filename)
