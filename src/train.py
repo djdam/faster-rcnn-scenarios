@@ -28,6 +28,7 @@ import cPickle
 import shutil
 from scenario import Scenario
 import pprint
+import GPUtil
 
 def parse_args():
     """
@@ -263,16 +264,25 @@ if __name__ == '__main__':
     print 'Stage 1 RPN, generate proposals'
     print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
 
-    parts = min(args.gpus,cpu_count)
+    parts = min(len(GPUtil.getGPUs()),cpu_count)
 
     print 'Number of parts is',parts
     pool=Pool(processes=parts)
+
+    def gpu_conf(cfg):
+
+        DEVICE_ID_LIST = GPUtil.getFirstAvailable()
+        if (len(DEVICE_ID_LIST) > 0):
+            cfg.GPU_ID = DEVICE_ID_LIST[0]  # grab first element from list
+
+
+        return cfg
 
     configs=[
         dict(
             imdb_name='%s_part_%dof%d' % (scenario.train_imdb, part_id, parts),
             rpn_model_path=str(rpn_stage1_out['model_path']),
-            cfg=cfg,
+            cfg=gpu_conf(cfg),
             rpn_test_prototxt=scenario.models['rpn_test'],
             output_dir=output_dir,
             part_id=part_id
