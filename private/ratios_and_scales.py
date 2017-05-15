@@ -27,8 +27,7 @@ def create_scenarios():
 
     SMALL_SCALES=[4, 8, 16]
     DEFAULT_SCALES=[8, 16, 32]
-    XXS=[0.25,0.5,0.75,1]
-    XXS+=[1/i for i in XXS if i != 1]
+    BROAD_RANGE_OF_SCALES=[0.25,0.5,0.75,1,2,4,8,16,32]
     FOUR_SCALES_XS=[2, 4, 8, 16]
     FOUR_SCALES_MD=[4, 8, 16, 32]
     FOUR_SCALES_LG=[8, 16, 32, 64]
@@ -60,9 +59,7 @@ def create_scenarios():
 
     scales_and_ratios=[
         dict(id="default"),
-        dict(id="small_scales_feat_stride_8", scales=SMALL_SCALES, feat_stride=8, ratios=EVEN_MORE_RATIOS),
-        dict(id="xxs_scales_feat_stride_4", scales=XXS, feat_stride=16, ratios=MORE_RATIOS),
-        dict(id="test", scales=FOUR_SCALES_XS, feat_stride=16, ratios=MORE_RATIOS),
+        dict(id="broad_range_of_scales", scales=BROAD_RANGE_OF_SCALES, feat_stride=16, ratios=MORE_RATIOS),
     ]
 
     return [create(snr) for snr in scales_and_ratios]
