@@ -356,7 +356,7 @@ if __name__ == '__main__':
             solver=scenario.models['stage1_fast_rcnn_solver'],
             max_iters=max_iters[1],
             cfg=cfg,
-            rpn_file=aggregated_proposal_path, output_dir=output_dir)
+            rpn_file=rpn_stage1_out['proposal_path'], output_dir=output_dir)
     p = mp.Process(target=train_fast_rcnn, kwargs=mp_kwargs)
     p.start()
     fast_rcnn_stage1_out = mp_queue.get()
