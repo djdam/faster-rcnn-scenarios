@@ -161,7 +161,7 @@ def train_fast_rcnn(queue=None, imdb_name=None, init_model=None, solver=None,
 
     cfg.TRAIN.HAS_RPN = False           # not generating prosals on-the-fly
     cfg.TRAIN.PROPOSAL_METHOD = 'rpn'   # use pre-computed RPN proposals instead
-    cfg.TRAIN.IMS_PER_BATCH = 2
+    cfg.TRAIN.IMS_PER_BATCH = 1
     print 'Init model: {}'.format(init_model)
     print 'RPN proposals: {}'.format(rpn_file)
     print('Using config:')
@@ -184,7 +184,8 @@ def train_fast_rcnn(queue=None, imdb_name=None, init_model=None, solver=None,
         os.remove(i)
     fast_rcnn_model_path = model_paths[-1]
     # Send Fast R-CNN model path over the multiprocessing queue
-    queue.put({'model_path': fast_rcnn_model_path})
+    if queue != None:
+        queue.put({'model_path': fast_rcnn_model_path})
 
 def dir_exists_or_create(path):
     # create scenario dir if it not exists
@@ -235,7 +236,7 @@ if __name__ == '__main__':
 
     # queue for communicated results between processes
     mp_queue = mp.Queue()
-    # solves, iters, etc. for each training stage
+    # solves, iters, etc. for each training stagef
     print '#'*25
     print 'USING SCENARIO:'
     print scenario.scenario

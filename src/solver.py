@@ -62,7 +62,7 @@ class SolverConfig(CaffeConfig):
         s.weight_decay = self.weight_decay
 
         # Display the current training loss and accuracy every 1000 iterations.
-        s.display = 20
+        s.display = self.display
 
         # Snapshots are files used to store networks we've trained.  Here, we'll
         # snapshot every 10K iterations -- ten times during training.

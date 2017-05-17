@@ -33,9 +33,9 @@ default_scenario=Scenario(
         weights_path=join(faster_rcnn_root, "data/imagenet_models/ZF.v2.caffemodel"),  # you have to download this first
         gpu_id=0,
         # max_iters=[1, 1, 1, 1],  # max iters
-        max_iters=[1000, 1000, 1000, 1000],  # max iters
+        max_iters=[10000, 10000, 10000, 10000],  # max iters
         rpn_config=RpnConfig(num_classes=2, anchor_scales=DEFAULT_SCALES, anchor_feat_stride=16, anchor_ratios=DEFAULT_RATIOS),
         fast_rcnn_config=FastRcnnConfig(num_classes=2, anchor_scales=DEFAULT_SCALES, anchor_feat_stride=16, anchor_ratios=DEFAULT_RATIOS),
-        solver_config=SolverConfig(step_size=3500),
+        solver_config=SolverConfig(step_size=8500, display=5),
         config=yaml.load(open(default_cfg))
     )

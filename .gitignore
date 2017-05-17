@@ -1,3 +1,5 @@
 .idea
 examples/scenarios
 private/scenarios
+src/analysis/output
+src/*.sh
