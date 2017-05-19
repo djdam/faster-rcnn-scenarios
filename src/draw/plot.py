@@ -160,6 +160,7 @@ def plot_chart(log_file, path_to_png):
                 marker = random_marker()
                 plt.plot(x_data, y_data, label = label, color = color,
                          marker = marker, linewidth = linewidth)
+
     #legend_loc = get_legend_loc(chart_type)
     #plt.legend(loc = legend_loc, ncol = 1) # ajust ncol to fit the space
     #plt.xlabel(x_axis_field)

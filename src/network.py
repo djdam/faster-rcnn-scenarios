@@ -38,8 +38,11 @@ class NetworkConfig(CaffeConfig):
     def save(self, network):
         return CaffeConfig.save(self, network.to_proto())
 
+    def feat_stride_multiplier(self):
+        return  (16 / self.anchor_feat_stride)**2
+
     def nr_of_anchors(self):
-        return len(self.anchor_scales) * len(self.anchor_ratios)
+        return len(self.anchor_scales) * len(self.anchor_ratios) * self.feat_stride_multiplier()
 
     def __repr__(self):
         return to_string(self)

@@ -13,7 +13,7 @@ if __name__ == '__main__':
 
 from datasets.factory import get_imdb
 
-pkl_file='/home/dennis/workspace/faster-rcnn-scenarios/private/scenarios/broad_range_of_scales/output/_stage1_iter_1000_proposals.pkl'
+pkl_file='/home/dennis/workspace/data/broad_range_of_scales/output/_stage2_iter_10000_proposals.pkl'
 
 imdb=get_imdb("technicaldrawings_numbers_train")
 roi_db=imdb.gt_roidb()
