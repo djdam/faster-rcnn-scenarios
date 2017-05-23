@@ -2,6 +2,7 @@ TEST:
   BBOX_REG: false
   HAS_RPN: true
   RPN_MIN_SIZE: 3
+  PROPOSAL_METHOD: gt
 TRAIN:
   USE_FLIPPED: false
   BATCH_SIZE: 512
