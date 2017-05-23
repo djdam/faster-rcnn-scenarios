@@ -113,7 +113,9 @@ class Scenario(CaffeConfig):
         self.models['stage1_rpn']=rpn.generate()
         self.models['stage1_fast_rcnn']=fast_rcnn.generate()
 
+        solver_config.snapshot_prefix='rpn'
         self.models['stage1_rpn_solver']=solver_config.generate(rpn)
+        solver_config.snapshot_prefix='fastrcnn'
         self.models['stage1_fast_rcnn_solver']=solver_config.generate(fast_rcnn)
 
         # stage 2 : freeze conv 1-5
@@ -122,7 +124,10 @@ class Scenario(CaffeConfig):
 
         self.models['stage2_rpn'] =rpn.generate()
         self.models['stage2_fast_rcnn'] =fast_rcnn.generate()
+
+        solver_config.snapshot_prefix='rpn'
         self.models['stage2_rpn_solver'] =solver_config.generate(rpn)
+        solver_config.snapshot_prefix='fast_rcnn'
         self.models['stage2_fast_rcnn_solver'] =solver_config.generate(fast_rcnn)
 
         rpn.train = fast_rcnn.train = False

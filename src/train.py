@@ -97,7 +97,8 @@ def train_rpn(queue=None, imdb_name=None, init_model=None, solver=None,
     _init_caffe(cfg)
 
     roidb, imdb = get_roidb(imdb_name)
-    print 'roidb len: {}'.format(len(roidb))
+    # print 'first image: ',imdb.gt_roidb()
+    # print 'roidb len: {}'.format(len(roidb))
     if output_dir==None:
         output_dir = get_output_dir(imdb)
     print 'Output will be saved to `{:s}`'.format(output_dir)

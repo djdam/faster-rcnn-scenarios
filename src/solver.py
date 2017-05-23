@@ -15,6 +15,7 @@ class SolverConfig(CaffeConfig):
         self.gamma=gamma
         self.weight_decay=weight_decay
         self.lr_policy=lr_policy
+        self.snapshot_prefix=''
 
     def path(self):
         self.dir_exists_or_create()
@@ -71,6 +72,7 @@ class SolverConfig(CaffeConfig):
         # Train on the GPU.  Using the CPU to train large networks is very slow.
         s.solver_mode = caffe_pb2.SolverParameter.GPU
 
+        s.snapshot_prefix=self.snapshot_prefix
         return self.save(s)
 
     def __repr__(self):
