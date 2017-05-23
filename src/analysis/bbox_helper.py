@@ -7,9 +7,14 @@ from os.path import join, basename
 
 # Bounding Box Helper
 class BBoxHelper:
-    def __init__(self, imdb_entry):
+    def __init__(self, imdb_entry, filename=None, scaled_img=None):
         self.rects=imdb_entry['boxes']
-        self.annotation_filename = imdb_entry['filename']
+        self.scaled_img=scaled_img
+        if filename == None:
+            self.annotation_filename = imdb_entry['filename']
+        else:
+            self.annotation_filename=filename
+
         dir, filename = os.path.split(self.annotation_filename)
         base=os.path.splitext(basename(filename))[0]
         img_no_ext=join(dir,'..','images', base)
@@ -22,13 +27,17 @@ class BBoxHelper:
         print self.imgPath
 
         im=cv2.imread(self.imgPath)
+        if self.scaled_img != None:
+            width, height=self.scaled_img[:2]
+            im=cv2.resize(im, (int(height),int(width)), interpolation=cv2.INTER_CUBIC)
+
         if (len(boxes) == 0):
             print 'Warning'
         for rectIdx in range(0, len(boxes)):
 
             x1,y1,x2,y2=boxes[rectIdx]
             color=(255,0,0)
-            im=cv2.rectangle(im, (x1,y1), (x2, y2), color=color, thickness=3)
+            im=cv2.rectangle(im, (int(x1),int(y1)), (int(x2), int(y2)), color=color, thickness=3)
 
         cv2.imwrite(join(outputFolder, basename(self.imgPath)), im)
 

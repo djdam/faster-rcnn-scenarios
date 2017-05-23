@@ -13,6 +13,7 @@ if __name__ == '__main__':
 
 from datasets.factory import get_imdb
 
+WARNING_AMOUNT_OF_BOXES=50
 
 imdb=get_imdb("technicaldrawings_numbers_train")
 
@@ -66,6 +67,10 @@ stats = get_statistics(imdb)
 warnings=[]
 for im in stats:
     print 'image size: %s x %s  -> %s x %s'%(im.width,im.height, int(im.dest_width), int(im.dest_height))
+    if len(im.boxes) > WARNING_AMOUNT_OF_BOXES :
+        warnings.append("Warning: more than %d boxes: %s"%(WARNING_AMOUNT_OF_BOXES, im.filename))
+    elif len(im.boxes)==0:
+        warnings.append("Warning: zero boxes: %s" % (im.filename))
     for box_idx in range(0,len(im.boxes)):
         x1, y1, x2, y2 = im.boxes[box_idx]
         dest_x1, dest_y1, dest_x2, dest_y2 = im.resized_boxes[box_idx]
@@ -94,6 +99,16 @@ aspect_ratios = flatten([im.aspect_ratios for im in stats])
 bbox_widths = [w for w,h in dims ]
 bbox_heights = [h for w,h in dims]
 scale_factors = [im.scale_factor for im in stats]
+widths=[im.width for im in stats]
+heights=[im.height for im in stats]
+
+print 'min im width: %.2f '%(min(widths))
+print 'mean  im width: %.2f '%(np.mean(widths))
+print 'max  im width: %.2f '%(max(widths))
+
+print 'min im height: %.2f '%(min(heights))
+print 'mean  im height: %.2f '%(np.mean(heights))
+print 'max  im height: %.2f '%(max(heights))
 
 
 print 'min scale_factors: %.2f '%(min(scale_factors))

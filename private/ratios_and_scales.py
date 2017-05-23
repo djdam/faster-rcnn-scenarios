@@ -58,7 +58,10 @@ def create_scenarios():
         return s
 
     scales_and_ratios=[
-        dict(id="broad_range_of_scales", feat_stride=4, scales=BROAD_RANGE_OF_SCALES, ratios=MORE_RATIOS),
+        # dict(id="feat_stride_2", feat_stride=2),
+        dict(id="feat_stride_8", feat_stride=8,scales=[1,2,4,8]),
+        dict(id="feat_stride_4", feat_stride=4, scales=[1,2,4,8]),
+        dict(id="feat_stride_2", feat_stride=2, scales=[1,2,4,8]),
     ]
 
     return [create(snr) for snr in scales_and_ratios]
