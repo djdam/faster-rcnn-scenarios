@@ -1,6 +1,7 @@
 #!/bin/bash
 export OUT_DIR=/home/dennis/workspace/faster-rcnn-scenarios/src/analysis/output
 TEMP_DIR=$OUT_DIR/temp_proposal_movie
+rm -rf $TEMP_DIR
 mkdir $TEMP_DIR
 
 function create_frame {
@@ -19,6 +20,11 @@ for PREFIX in $(seq -f "%04g" 2000); do
     FILE_PATH_START=$OUT_DIR/$PREFIX
     if exists $FILE_PATH_START*; then
         montage $FILE_PATH_START* -tile 2x1 -geometry +0+0 $TEMP_DIR/$PREFIX.png
+        bn=""
+        for f in `ls $OUT_DIR/$PREFIX*`; do
+            bn=$bn+$(basename $f);
+        done;
+        convert $TEMP_DIR/$PREFIX.png -background Orange  label:"$bn" +swap -gravity Center -append $TEMP_DIR/$PREFIX.png
     else
         break
     fi
@@ -26,5 +32,5 @@ done
 
 
 convert -delay 50 -loop 0 $TEMP_DIR/*.png $TEMP_DIR/animation.gif
-ffmpeg -f gif -i $TEMP_DIR/animation.gif $TEMP_DIR/rpn_proposal.mp4
-#rm -rf $TEMP_DIR
+ffmpeg -f gif -i $TEMP_DIR/animation.gif $OUT_DIR/rpn_proposal.mp4
+rm -rf $TEMP_DIR
