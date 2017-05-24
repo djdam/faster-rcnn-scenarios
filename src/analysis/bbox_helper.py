@@ -23,7 +23,7 @@ class BBoxHelper:
                 self.imgPath=img_no_ext+ext
                 break
 
-    def saveBoundingBoxesToImage(self, boxes, outputFolder):
+    def saveBoundingBoxesToImage(self, boxes, outputFolder, scores=[], prefix=None):
         print self.imgPath
 
         im=cv2.imread(self.imgPath)
@@ -36,10 +36,22 @@ class BBoxHelper:
         for rectIdx in range(0, len(boxes)):
 
             x1,y1,x2,y2=boxes[rectIdx]
-            color=(255,0,0)
-            im=cv2.rectangle(im, (int(x1),int(y1)), (int(x2), int(y2)), color=color, thickness=3)
+            if len(scores) > 0:
+                score=scores[rectIdx]
+                if score>0.98:
+                    color = (0, 0, 255)
+                else:
+                    blue=int(255 * score)
+                    color = (blue, int(255*(1-score)), int(255*(1-score)))
+            else:
+                color=(255,0,0)
+            im=cv2.rectangle(im, (int(x1),int(y1)), (int(x2), int(y2)), color=color, thickness=1)
 
-        cv2.imwrite(join(outputFolder, basename(self.imgPath)), im)
+        imname=basename(self.imgPath)
+        if prefix != None:
+            imname=str(prefix)+imname
+
+        cv2.imwrite(join(outputFolder, imname), im)
 
     def saveBoundBoxImage(self, imgPath=None, outputFolder=None):
             if imgPath is not None:

@@ -59,9 +59,9 @@ def create_scenarios():
 
     scales_and_ratios=[
         # dict(id="feat_stride_2", feat_stride=2),
-        dict(id="feat_stride_8", feat_stride=8,scales=[1,2,4,8]),
-        dict(id="feat_stride_4", feat_stride=4, scales=[1,2,4,8]),
-        dict(id="feat_stride_2", feat_stride=2, scales=[1,2,4,8]),
+        dict(id="feat_stride_8", feat_stride=8,scales=[0.25,0.5,1,2,4,8]),
+        dict(id="feat_stride_4", feat_stride=4, scales=[0.25,0.5,1,2,4,8]),
+        dict(id="feat_stride_2", feat_stride=2, scales=[0.25,0.5,1,2,4,8]),
     ]
 
     return [create(snr) for snr in scales_and_ratios]

@@ -6,6 +6,7 @@ set -x
 set -e
 
 rm -f $CAFFE_ROOT/data/cache/*.pkl
+rm -f {scenarios_dir}/{scenario}/output/*.pkl
 
 DIR=`pwd`
 

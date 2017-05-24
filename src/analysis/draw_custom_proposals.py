@@ -17,7 +17,7 @@ from datasets.factory import get_imdb
 
 IMAGES_TO_ANNOTATE = 25
 
-train_gt_roidb_pkl_file='/home/dennis/workspace/py-faster-rcnn/data/cache/train__gt_roidb.pkl'
+train_gt_roidb_pkl_file='/home/dennis/workspace/faster-rcnn-scenarios/src/train__gt_roidb.pkl'
 cache=cPickle.load(open(train_gt_roidb_pkl_file, 'r'))
 
 filenames=[
@@ -963,13 +963,15 @@ filenames=[
 './data/technicaldrawings/numbers/annotations/veere_223.pdf.xml',
 './data/technicaldrawings/numbers/annotations/stadskanaal113.pdf.xml',
 
+
+
 ]
 filenames=[join(_init_paths.faster_rcnn_root, f) for f in filenames]
 
 imdb=get_imdb("technicaldrawings_numbers_train")
 roi_db=imdb.gt_roidb()
-# filenames = ['JamesBell-0.jpg', 'stadskanaal386.pdf.xml',',', 'stadskanaal130.pdf-1.xml',',', 'WilliamMorris-0.xml',',',
-#              'steenwijkerland_1323.pdf-1.xml',',']
+# filenames = ['JamesBell-0.jpg', 'stadskanaal386.pdf.xml',',',',',', 'stadskanaal130.pdf-1.xml',',',',', 'WilliamMorris-0.xml',',',',',
+#              'steenwijkerland_1323.pdf-1.xml',',',',']
 def getBasenameNoExt(filename):
    return os.path.splitext(basename(filename))[0]
 
@@ -977,14 +979,57 @@ entry_dict={}
 for roi_entry in roi_db:
     entry_dict[getBasenameNoExt(roi_entry['filename'])]=roi_entry
 
+
+
 im_root='/home/dennis/workspace/py-faster-rcnn/data/technicaldrawings/numbers/images/'
+
+
 for im_idx in range(0,340):
 
-    im_info, bboxes=cPickle.load(file('/home/dennis/workspace/faster-rcnn-scenarios/private/scenarios/feat_stride_8/output/proposals_%d.pkl'%im_idx, 'r'))
-    print filenames[im_idx]
-    print int(im_info[0]), int(im_info[1])
+    scores=[]
 
-    im_entry=entry_dict[getBasenameNoExt(filenames[im_idx])]
-    bbox_helper = BBoxHelper(im_entry, join(im_root, filenames[im_idx]), im_info)
-    # bboxes=[ [x1,y1,x2,y2] for y1,x1, y2, x2 in bboxes]
-    bbox_helper.saveBoundingBoxesToImage(bboxes[:,:4],'/home/dennis/workspace/faster-rcnn-scenarios/src/analysis/output')
+    def thresh(bboxes, scores, th):
+        # unknown_inds = scores < 0
+        # bg_inds = (scores >= 0) & (scores <= 0.5)
+        fg_inds = scores > th
+
+        return bboxes[fg_inds], scores[fg_inds]
+
+    def loadFinalProposals():
+        data=cPickle.load(file('/home/dennis/workspace/faster-rcnn-scenarios/private/scenarios/feat_stride_8/output/final_proposals_%d.pkl' % im_idx,'r'))
+        scores=np.array(data[2])[:,1]
+
+        boxes=data[0]
+        im_info=data[1]
+        boxes, scores = thresh(boxes, scores, 0.2)
+
+        return boxes, scores, im_info
+
+    def loadRpnProposals():
+        data=cPickle.load(file('/home/dennis/workspace/faster-rcnn-scenarios/private/scenarios/feat_stride_8/output/proposals_%d.pkl' % im_idx,'r'));
+        print data
+        im_info, boxes, scores = data
+
+        boxes=np.array(boxes)
+        scores = np.array(scores).flatten()
+        print boxes
+        print scores
+
+        boxes, scores = thresh(boxes, scores, 0.98)
+
+        return boxes, scores, im_info
+
+    def save(boxes, scores, im_info, infix='proposals'):
+        im_entry=entry_dict[getBasenameNoExt(filenames[im_idx])]
+        bbox_helper = BBoxHelper(im_entry, join(im_root, filenames[im_idx]), im_info)
+        # bboxes=[ [x1,y1,x2,y2] for y1,x1, y2, x2 in bboxes]
+        prefix = prefix = "{0:0>4}_".format(im_idx) + "_" + infix
+        bbox_helper.saveBoundingBoxesToImage(boxes,'/home/dennis/workspace/faster-rcnn-scenarios/src/analysis/output', scores, prefix)
+
+
+    boxes, scores, im_info=loadFinalProposals()
+    # save(proposals, 'proposals')
+    save(boxes, scores, im_info, 'final_proposals')
+
+    boxes, scores, im_info=loadRpnProposals()
+    save(boxes, scores, im_info, 'rpn_proposals')
