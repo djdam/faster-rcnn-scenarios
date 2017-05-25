@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.legend as lgd
 import matplotlib.markers as mks
 from parse_log import parse_log
+import numpy as np
 
 RPN_FIELDS=    [
         ['NumIters', 'loss_cls'],
@@ -24,6 +25,11 @@ FAST_RCNN_FIELDS=[
 
 FIELDS = [RPN_FIELDS, FAST_RCNN_FIELDS, RPN_FIELDS, FAST_RCNN_FIELDS]
 LABELS = ["Stage 1 : RPN", "Stage 1 : Faster-RCNN", "Stage 2 : RPN", "Stage 2 : Faster-RCNN"]
+
+def enum(**enums):
+    return type('Enum', (), enums)
+
+PLOT_MODE=enum(NORMAL="normal", MOVING_AVG="movingavg", BOTH="both")
 
 def get_log_file_suffix():
     return '.log'
@@ -127,7 +133,11 @@ def get_legend_loc(chart_type):
         loc = 'upper right'
     return loc
 
-def plot_chart(log_file, path_to_png):
+def moving_average(values, N):
+    averaged=np.convolve(np.array(values), np.ones((N,))/N, mode='valid')
+    return np.concatenate((np.tile(averaged[0], N - 1), averaged))
+
+def plot_chart(log_file, path_to_png, mode=PLOT_MODE.NORMAL):
 
     mean_ap=0
     phases, detected_mean_ap = parse_log(log_file)
@@ -140,10 +150,12 @@ def plot_chart(log_file, path_to_png):
 
     end_phase=min(len(phases), 4)
     for phase_idx in range(0,end_phase):
-        phase=phases[phase_idx]
+        phase=np.array(phases[phase_idx])
         plt.subplot(411+phase_idx)
         label = LABELS[phase_idx]
         plt.title("%s%s"%( "mAP = %f    "%mean_ap if phase_idx == 0 else "",str(label[phase_idx])))
+
+
         for x_label,y_label in FIELDS[phase_idx]:
             ## TODO: more systematic color cycle for lines
             color = [random.random(), random.random(), random.random()]
@@ -151,8 +163,23 @@ def plot_chart(log_file, path_to_png):
             ## If there too many datapoints, do not use marker.
     ##        use_marker = False
             use_marker = True
+
+            # if (mode==PLOT_MODE.MOVING_AVG):
+
             x_data = [row[x_label] for row in phase]
             y_data = [row[y_label] for row in phase]
+
+
+            if mode==PLOT_MODE.MOVING_AVG:
+                y_data=moving_average(y_data, 100)
+            elif mode == PLOT_MODE.BOTH:
+                marker = random_marker()
+                plt.plot(x_data, y_data, label=label, color=color,
+                         marker=marker, linewidth=linewidth)
+
+                color = [random.random(), random.random(), random.random()]
+                y_data = moving_average(y_data, 100)
+
             if not use_marker:
                 plt.plot(x_data, y_data, label = label, color = color,
                          linewidth = linewidth)
@@ -187,5 +214,5 @@ if __name__ == '__main__':
         if not os.path.exists(log_file):
             print 'Log file does not exist: %s' % log_file
             sys.exit()
-        plot_chart(log_file, path_to_png)
+        plot_chart(log_file, path_to_png, PLOT_MODE.MOVING_AVG)
 
