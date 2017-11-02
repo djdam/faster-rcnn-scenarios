@@ -32,11 +32,11 @@ def get_statistics(imdb):
         image.width=int(width)
         image.height=int(height)
         if width > height:
-            image.dest_height = 600
+            image.dest_height = resize_dim
             image.scale_factor = resize_dim / float(image.height)
             image.dest_width = image.width * image.scale_factor
         else:
-            image.dest_width = 600
+            image.dest_width = resize_dim
             image.scale_factor = resize_dim / float(image.width)
             image.dest_height = image.height * image.scale_factor
 
@@ -103,12 +103,12 @@ widths=[im.width for im in stats]
 heights=[im.height for im in stats]
 
 print 'min im width: %.2f '%(min(widths))
-print 'mean  im width: %.2f '%(np.mean(widths))
-print 'max  im width: %.2f '%(max(widths))
+print 'mean im width: %.2f '%(np.mean(widths))
+print 'max im width: %.2f '%(max(widths))
 
 print 'min im height: %.2f '%(min(heights))
-print 'mean  im height: %.2f '%(np.mean(heights))
-print 'max  im height: %.2f '%(max(heights))
+print 'mean im height: %.2f '%(np.mean(heights))
+print 'max im height: %.2f '%(max(heights))
 
 
 print 'min scale_factors: %.2f '%(min(scale_factors))
